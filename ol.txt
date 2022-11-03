@@ -1,0 +1,40 @@
+--for 3d materialized view consider 1 fact table and 3 other tables
+create materialized view mv as 
+select s_name, gre_score, uni_name 
+from student 
+inner join fact_table on fact_table.student_id = student.student_id
+inner join university on fact_table.uni_id = university.uni_id
+inner join exam_scores on fact_table.score_id = exam_scores.score_id; 
+
+create materialized view mv2 as 
+select s_name, gre_score, uni_name, internship_quantity
+from student 
+inner join fact_table on fact_table.student_id = student.student_id
+inner join university on fact_table.uni_id = university.uni_id
+inner join exam_scores on fact_table.score_id = exam_scores.score_id; 
+
+create materialized view mv3 as 
+select s_name, gre_score, uni_name, internship_quantity, course_name
+from student 
+inner join fact_table on fact_table.student_id = student.student_id
+inner join university on fact_table.uni_id = university.uni_id
+inner join exam_scores on fact_table.score_id = exam_scores.score_id
+inner join courses on fact_table.course_id = courses.course_id;
+
+select * from mv where uni_name = 'Harvard University'; --slice
+
+select * from mv2 where 
+(gre_score = 325 or gre_score = 333) 
+and (uni_name = 'Harvard University' or uni_name = 'Yale University') 
+and (internship_quantity = 1 or internship_quantity = 2); --dice with const gre_score, internship_qty and uni_name (make sure 1 from each table is there)
+
+select sum(gre_score)as score, sum(internship_quantity) as intern_qty, uni_name from mv2
+group by rollup(uni_name); --rollup on uni_name (in general rollup mein use sum() not avg)
+
+select sum(gre_score)as score, sum(internship_quantity) as intern_qty, uni_name, course_name from mv3
+group by rollup(uni_name, course_name) order by uni_name; --rollup on uni_name and course_name
+
+select sum(gre_score)as score, sum(internship_quantity) as intern_qty, uni_name, course_name from mv3
+group by uni_name, course_name order by uni_name; --drilldown
+
+select course_name, internship_quantity, uni_name, gre_score, s_name from mv3; --pivot
